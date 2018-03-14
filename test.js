@@ -3,13 +3,17 @@ const {afterEach, beforeEach, describe, it} = require("mocha");
 const {expect} = require("chai");
 const Nightmare = require("nightmare");
 
-const browser = new Nightmare({ nodeIntegration:false }).goto("about:blank");
+let browser;
 
 
 
-const it_browser_URL = cfg =>
+const getBrowser = () => new Nightmare({ nodeIntegration:false }).goto("about:blank");
+
+
+
+const it_browser_URL = ({checkHost, useGlobal}) =>
 {
-	it(`works${cfg.useGlobal ? " globally" : ""}`, function()
+	it(`works${useGlobal ? " globally" : ""}`, function()
 	{
 		return browser.evaluate( function(useGlobal)
 		{
@@ -33,10 +37,10 @@ const it_browser_URL = cfg =>
 				search: url.search,
 				param: url.searchParams.get("param")
 			};
-		}, cfg.useGlobal)
+		}, useGlobal)
 		.then(result =>
 		{
-			if (cfg.checkHost)
+			if (checkHost)
 			{
 				expect(result.hostname).to.equal("xn--fa-hia.example");
 			}
@@ -49,9 +53,9 @@ const it_browser_URL = cfg =>
 
 
 
-const it_browser_URLSearchParams = cfg =>
+const it_browser_URLSearchParams = ({useGlobal}) =>
 {
-	it(`works${cfg.useGlobal ? " globally" : ""}`, function()
+	it(`works${useGlobal ? " globally" : ""}`, function()
 	{
 		return browser.evaluate( function(useGlobal)
 		{
@@ -76,7 +80,7 @@ const it_browser_URLSearchParams = cfg =>
 				p2: params.get("p2"),
 				p2all: params.getAll("p2")
 			};
-		}, cfg.useGlobal)
+		}, useGlobal)
 		.then(result =>
 		{
 			expect(result.params).to.not.be.undefined;
@@ -89,20 +93,20 @@ const it_browser_URLSearchParams = cfg =>
 
 
 
-const it_node_URL = cfg =>
+const it_node_URL = ({lib, useGlobal}) =>
 {
-	it(`works${cfg.useGlobal ? " globally" : ""}`, function()
+	it(`works${useGlobal ? " globally" : ""}`, function()
 	{
 		let URL;
 
-		if (cfg.useGlobal)
+		if (useGlobal)
 		{
-			cfg.lib.shim();
+			lib.shim();
 			URL = global.URL;
 		}
 		else
 		{
-			URL = cfg.lib.URL;
+			URL = lib.URL;
 		}
 
 		const url = new URL("http://faß.ExAmPlE/?param=value#hash");
@@ -116,20 +120,20 @@ const it_node_URL = cfg =>
 
 
 
-const it_node_URLSearchParams = cfg =>
+const it_node_URLSearchParams = ({lib, useGlobal}) =>
 {
-	it(`works${cfg.useGlobal ? " globally" : ""}`, function()
+	it(`works${useGlobal ? " globally" : ""}`, function()
 	{
 		let URLSearchParams;
 
-		if (cfg.useGlobal)
+		if (useGlobal)
 		{
-			cfg.lib.shim();
+			lib.shim();
 			URLSearchParams = global.URLSearchParams;
 		}
 		else
 		{
-			URLSearchParams = cfg.lib.URLSearchParams;
+			URLSearchParams = lib.URLSearchParams;
 		}
 
 		const params = new URLSearchParams("?p1=v&p2=&p2=v&p2");
@@ -176,12 +180,20 @@ describe("Node.js", function()
 
 describe("Web Browser (without native)", function()
 {
+	before(() => browser = getBrowser());
+
+
+
 	beforeEach(() => browser.refresh().evaluate( function()
 	{
 		window.URL = undefined;
 		window.URLSearchParams = undefined;
 	})
 	.then(() => browser.inject("js", "browser-built.js")));
+
+
+
+	after(() => browser.end());
 
 
 
@@ -204,7 +216,11 @@ describe("Web Browser (without native)", function()
 
 describe("Web Browser (with native)", function()
 {
+	before(() => browser = getBrowser());
+
 	beforeEach(() => browser.refresh().inject("js", "browser-built.js"));
+
+	after(() => browser.end());
 
 
 
